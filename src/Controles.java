@@ -79,22 +79,37 @@ import javax.swing.JOptionPane;
 
     }
 
-     void cambiarNombre(File archivo) {
-        String nuevoNombre = JOptionPane.showInputDialog(null, "Ingrese el nuevo nombre:", archivo.getName());
+        void cambiarNombre(File archivo) {
+            String extensionOriginal = "";
 
-        if (nuevoNombre != null && !nuevoNombre.trim().isEmpty()) {
-            File archivoRenombrado = new File(archivo.getParent(), nuevoNombre);
-
-            boolean exito = archivo.renameTo(archivoRenombrado);
-
-            if (exito) {
-                JOptionPane.showMessageDialog(null, "El archivo ha sido renombrado exitosamente.");
-            } else {
-                JOptionPane.showMessageDialog(null, "No se pudo renombrar el archivo.");
+            int i = archivo.getName().lastIndexOf('.');
+            if (i > 0 && i < archivo.getName().length() - 1) {
+                extensionOriginal = archivo.getName().substring(i); 
             }
-        } else {
-            JOptionPane.showMessageDialog(null, "El nombre no puede estar vacío.");
+
+            String nuevoNombre = JOptionPane.showInputDialog(
+                null,
+                "Ingrese el nuevo nombre (sin cambiar la extensión):",
+                archivo.getName().replace(extensionOriginal, "") 
+            );
+
+            if (nuevoNombre != null && !nuevoNombre.trim().isEmpty()) {
+                if (!nuevoNombre.endsWith(extensionOriginal)) {
+                    nuevoNombre += extensionOriginal;
+                }
+
+                File archivoRenombrado = new File(archivo.getParent(), nuevoNombre);
+
+                boolean exito = archivo.renameTo(archivoRenombrado);
+
+                if (exito) {
+                    JOptionPane.showMessageDialog(null, "El archivo ha sido renombrado exitosamente.");
+                } else {
+                    JOptionPane.showMessageDialog(null, "No se pudo renombrar el archivo.");
+                }
+            } else {
+                JOptionPane.showMessageDialog(null, "El nombre no puede estar vacío.");
+            }
         }
 
-    }
 }

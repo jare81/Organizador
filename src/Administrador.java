@@ -13,6 +13,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Comparator;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
@@ -32,6 +33,7 @@ public class Administrador extends JFrame {
     private DefaultListModel<String> listModel;
     private JScrollPane jScrollPane1, jScrollPane2;
     private DefaultMutableTreeNode rootNode;
+    private File seleccionado;
 
     public Administrador() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -114,7 +116,13 @@ public class Administrador extends JFrame {
 
         });
         bnNombre = new JButton("Cambiar nombre");
+        bnNombre.addActionListener(e -> {
+            control.cambiarNombre(seleccionado);
+
+        });
+
         bnCopi = new JButton("Copiar");
+
         bnPaste = new JButton("Pegar");
 
         ordenarCombo = new JComboBox<>(new String[]{
@@ -127,26 +135,8 @@ public class Administrador extends JFrame {
 
         ordenarCombo.addActionListener(e -> {
             String seleccion = (String) ordenarCombo.getSelectedItem();
-            switch (seleccion) {
-                case "Nombre":
-                    JOptionPane.showMessageDialog(this, "Ordenando por nombre...");
-                    // Lógica para ordenar por nombre
-                    break;
-                case "Fecha":
-                    JOptionPane.showMessageDialog(this, "Ordenando por fecha...");
-                    // Lógica para ordenar por fecha
-                    break;
-                case "Tamaño":
-                    JOptionPane.showMessageDialog(this, "Ordenando por tamaño...");
-                    // Lógica para ordenar por tamaño
-                    break;
-                case "Tipo":
-                    JOptionPane.showMessageDialog(this, "Ordenando por tipo...");
-                    // Lógica para ordenar por tipo
-                    break;
-                default:
-                    // Opción "Ordenar por" o inválida
-                    break;
+            if (seleccion != null && !seleccion.equals("Ordenar por")) {
+                ordenarArchivos(seleccion);
             }
         });
 
@@ -189,6 +179,7 @@ public class Administrador extends JFrame {
             if (selectedPath != null) {
                 DefaultMutableTreeNode node = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
                 File selectedFile = (File) node.getUserObject();
+                seleccionado = selectedFile;
 
                 if (selectedFile != null) {
                     if (selectedFile.isDirectory()) {
@@ -225,21 +216,73 @@ public class Administrador extends JFrame {
                 return c;
             }
         });
-        Comparator<File> byName = (f1, f2) -> f1.getName().compareToIgnoreCase(f2.getName());
-        Comparator<File> byDate = (f1, f2) -> Long.compare(f1.lastModified(), f2.lastModified());
-        Comparator<File> bySize = (f1, f2) -> Long.compare(f1.length(), f2.length());
-        Comparator<File> byType = (f1, f2) -> {
-            String ext1 = getFileExtension(f1);
-            String ext2 = getFileExtension(f2);
-            return ext1.compareToIgnoreCase(ext2);
-        };
-
     }
+    Comparator<File> byName = (f1, f2) -> f1.getName().compareToIgnoreCase(f2.getName());
+    Comparator<File> byDate = (f1, f2) -> Long.compare(f1.lastModified(), f2.lastModified());
+    Comparator<File> bySize = (f1, f2) -> Long.compare(f1.length(), f2.length());
+    Comparator<File> byType = (f1, f2) -> {
+        String ext1 = getFileExtension(f1);
+        String ext2 = getFileExtension(f2);
+        return ext1.compareToIgnoreCase(ext2);
+    };
 
     private String getFileExtension(File file) {
         String name = file.getName();
         int index = name.lastIndexOf('.');
         return index == -1 ? "" : name.substring(index + 1);
+    }
+
+    private void ordenarArchivos(String criterio) {
+        TreePath selectedPath = jTree1.getSelectionPath();
+        if (selectedPath == null) {
+            JOptionPane.showMessageDialog(this, "Por favor, seleccione una carpeta para ordenar.");
+            return;
+        }
+
+        DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+        File selectedFile = (File) selectedNode.getUserObject();
+
+        if (!selectedFile.isDirectory()) {
+            JOptionPane.showMessageDialog(this, "Por favor, seleccione una carpeta válida.");
+            return;
+        }
+
+        File[] archivos = selectedFile.listFiles();
+        if (archivos == null || archivos.length == 0) {
+            JOptionPane.showMessageDialog(this, "La carpeta seleccionada no contiene archivos para ordenar.");
+            return;
+        }
+
+        switch (criterio) {
+            case "Nombre":
+                Arrays.sort(archivos, byName);
+                break;
+            case "Fecha":
+                Arrays.sort(archivos, byDate);
+                break;
+            case "Tamaño":
+                Arrays.sort(archivos, bySize);
+                break;
+            case "Tipo":
+                Arrays.sort(archivos, byType);
+                break;
+            default:
+                JOptionPane.showMessageDialog(this, "Criterio de ordenación no válido.");
+                return;
+        }
+
+        selectedNode.removeAllChildren();
+        for (File archivo : archivos) {
+            selectedNode.add(crearNodo(archivo));
+        }
+
+        DefaultTreeModel model = (DefaultTreeModel) jTree1.getModel();
+        model.reload(selectedNode);
+
+        System.out.println("Archivos en " + selectedFile.getName() + " ordenados por " + criterio + ":");
+        for (File archivo : archivos) {
+            System.out.println(archivo.getName());
+        }
     }
 
     private void addNodeToTree(String name, boolean isDirectory) {
@@ -275,12 +318,6 @@ public class Administrador extends JFrame {
         }
 
         return nodo;
-    }
-    
-     private void actualizarJTree(File dir) {
-        rootNode = crearNodo(dir); 
-        DefaultTreeModel treeModel = new DefaultTreeModel(rootNode);
-        jTree1.setModel(treeModel); 
     }
 
     public static void main(String[] args) {
