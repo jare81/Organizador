@@ -12,9 +12,13 @@ import javax.swing.JFrame;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.rtf.RTFEditorKit;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
@@ -27,13 +31,15 @@ public class Administrador extends JFrame {
     private JTextField txtBuscar;
     private JPanel panelBotones;
     private JComboBox<String> crearCombo, ordenarCombo;
-    private JButton bnNombre, bnCopi, bnPaste;
+    private JButton bnNombre, bnCopi, bnPaste, bnModificar;
     private JTree jTree1;
     private JList<String> jList1;
     private DefaultListModel<String> listModel;
     private JScrollPane jScrollPane1, jScrollPane2;
     private DefaultMutableTreeNode rootNode;
+   private File archivoAbierto;
     private File seleccionado;
+    private JTextPane textPane;
 
     public Administrador() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -77,6 +83,7 @@ public class Administrador extends JFrame {
                         JOptionPane.showMessageDialog(this, "Creando una carpeta...");
                         control.crearFolder(fileName);
                         addNodeToTree(fileName, true);
+                        actualizarJTree();
                         break;
 
                     case "Documento de Word":
@@ -84,6 +91,7 @@ public class Administrador extends JFrame {
                         extension = ".docx";
                         control.crearFile(fileName + extension);
                         addNodeToTree(fileName + extension, false);
+                        actualizarJTree();
                         break;
 
                     case "Documento de texto":
@@ -91,6 +99,7 @@ public class Administrador extends JFrame {
                         extension = ".txt";
                         control.crearFile(fileName + extension);
                         addNodeToTree(fileName + extension, false);
+                        actualizarJTree();
                         break;
 
                     case "Documento PDF":
@@ -98,6 +107,7 @@ public class Administrador extends JFrame {
                         extension = ".pdf";
                         control.crearFile(fileName + extension);
                         addNodeToTree(fileName + extension, false);
+                        actualizarJTree();
                         break;
 
                     case "Hoja de Cálculo":
@@ -105,6 +115,7 @@ public class Administrador extends JFrame {
                         extension = ".xlsx";
                         control.crearFile(fileName + extension);
                         addNodeToTree(fileName + extension, false);
+                        actualizarJTree();
                         break;
 
                     default:
@@ -118,12 +129,79 @@ public class Administrador extends JFrame {
         bnNombre = new JButton("Cambiar nombre");
         bnNombre.addActionListener(e -> {
             control.cambiarNombre(seleccionado);
+            actualizarJTree();
 
         });
 
         bnCopi = new JButton("Copiar");
+        
+         bnCopi.addActionListener(e -> {
+            TreePath selectedPath = jTree1.getSelectionPath();
+            if (selectedPath == null) {
+                JOptionPane.showMessageDialog(this, "Por favor, seleccione un archivo para copiar.");
+                return;
+            }
+
+            DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+            File selectedFile = (File) selectedNode.getUserObject();
+
+            if (selectedFile == null || !selectedFile.exists()) {
+                JOptionPane.showMessageDialog(this, "El archivo seleccionado no existe.");
+                return;
+            }
+
+            if (selectedFile.isDirectory()) {
+                JOptionPane.showMessageDialog(this, "Seleccione un archivo, no un directorio.");
+                return;
+            }
+
+            boolean success = control.copiar(selectedFile);
+            if (success) {
+                JOptionPane.showMessageDialog(this, "Archivo copiado correctamente.");
+            } else {
+                JOptionPane.showMessageDialog(this, "Error al copiar el archivo.");
+            }
+        });
+
 
         bnPaste = new JButton("Pegar");
+        bnPaste.addActionListener(e -> {
+            TreePath selectedPath = jTree1.getSelectionPath();
+            if (selectedPath == null) {
+                JOptionPane.showMessageDialog(this, "Por favor, seleccione un directorio de destino.");
+                return;
+            }
+
+            DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+            File destinationFolder = (File) selectedNode.getUserObject();
+
+            if (destinationFolder == null || !destinationFolder.isDirectory()) {
+                JOptionPane.showMessageDialog(this, "Seleccione un directorio válido.");
+                return;
+            }
+
+            boolean success = control.pegar(destinationFolder);
+            if (success) {
+                JOptionPane.showMessageDialog(this, "Archivo pegado correctamente.");
+            } else {
+                JOptionPane.showMessageDialog(this, "Error al pegar el archivo.");
+            }
+            
+            actualizarJTree();
+        });
+
+        
+        bnModificar = new JButton("Modificar");
+        
+        bnModificar.addActionListener( e-> {
+           /* control.setTextFrame(textPane);
+            guardarCambios(textPane);*/
+            
+            abrirArchivo(seleccionado.getName());
+                control.setTextFrame(textPane);
+      
+        });
+        
 
         ordenarCombo = new JComboBox<>(new String[]{
             "Ordenar por",
@@ -144,6 +222,7 @@ public class Administrador extends JFrame {
         panelBotones.add(bnNombre);
         panelBotones.add(bnCopi);
         panelBotones.add(bnPaste);
+        panelBotones.add(bnModificar);
         panelBotones.add(ordenarCombo);
 
         grid.gridx = 0;
@@ -157,9 +236,9 @@ public class Administrador extends JFrame {
         jTree1.setPreferredSize(new Dimension(400, 40));
         jScrollPane1 = new JScrollPane(jTree1);
 
-        jList1 = new JList<>(new String[]{"Item 1", "Item 2", "Item 3", "Item 4", "Item 5"});
-        jList1.setPreferredSize(new Dimension(400, 40));
-        jScrollPane2 = new JScrollPane(jList1);
+        textPane = new JTextPane();
+        textPane.setPreferredSize(new Dimension(400, 40));
+        jScrollPane2 = new JScrollPane(textPane);
 
         panelVista.add(jScrollPane1);
         panelVista.add(jScrollPane2);
@@ -304,6 +383,56 @@ public class Administrador extends JFrame {
         DefaultTreeModel model = (DefaultTreeModel) jTree1.getModel();
         model.reload();
     }
+
+    
+    
+    
+   private void actualizarJTree() {
+        TreePath selectedPath = jTree1.getSelectionPath();
+
+        rootNode = crearNodo(new File(System.getProperty("user.dir")));
+
+        DefaultTreeModel model = new DefaultTreeModel(rootNode);
+        jTree1.setModel(model);
+
+        if (selectedPath != null) {
+            jTree1.setSelectionPath(selectedPath);
+        }
+    }
+
+    public void guardarCambios(JTextPane textPane) {
+        try {
+            RTFEditorKit rtfEditorKit = new RTFEditorKit(); // Usar para manejar RTF
+            if (seleccionado != null && seleccionado.canWrite()) {
+                try (FileOutputStream fos = new FileOutputStream(seleccionado)) {
+                    rtfEditorKit.write(fos, textPane.getDocument(), 0, textPane.getDocument().getLength());
+                    JOptionPane.showMessageDialog(this, "Archivo guardado con exito ");
+                }
+            } else {
+             JOptionPane.showMessageDialog(this, "Error no se puede escribir en un archivo nulo " );
+
+            }
+        } catch (IOException | BadLocationException e) {
+            JOptionPane.showMessageDialog(this, "Error al guardar el archivo: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private void abrirArchivo(String nombreArchivo) {
+        
+        File archivo = new File(seleccionado.getAbsolutePath());
+        archivoAbierto = archivo;
+
+        
+
+        try (FileInputStream fis = new FileInputStream(archivo)) {
+            RTFEditorKit rtfEditorKit = new RTFEditorKit();
+            textPane.setDocument(rtfEditorKit.createDefaultDocument());
+            rtfEditorKit.read(fis, textPane.getDocument(), 0);
+        } catch (IOException | javax.swing.text.BadLocationException ex) {
+            JOptionPane.showMessageDialog(this, "Error al leer el archivo: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
 
     private DefaultMutableTreeNode crearNodo(File file) {
         DefaultMutableTreeNode nodo = new DefaultMutableTreeNode(file);

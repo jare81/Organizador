@@ -4,10 +4,13 @@
  */
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import javax.swing.JOptionPane;
+import javax.swing.JTextPane;
+import javax.swing.text.rtf.RTFEditorKit;
 
 /**
  *
@@ -15,6 +18,13 @@ import javax.swing.JOptionPane;
  */public class Controles {
 
     private File directory = null;
+    private RTFEditorKit rtfEditorKit = new RTFEditorKit(); 
+    private JTextPane textPane;
+    private File fileToCopy;
+    
+    public void setTextFrame(JTextPane frame) {
+        this.textPane = frame;
+    }
 
     void modificarFile(File dir) {
         this.directory = dir;
@@ -52,31 +62,46 @@ import javax.swing.JOptionPane;
         return newFolder.mkdir(); 
     }
 
-    boolean copiar(String destino) {
-        if (directory == null || !directory.isDirectory()) {
-            JOptionPane.showMessageDialog(null, "No se ha seleccionado un directorio válido.");
-            return false;
-        }
-
-        // Assuming 'file' points to a file to copy
-        File file = new File(directory, "fileToCopy.txt");  // example file name
-        if (file.exists() && file.isFile()) {
-            File destFile = new File(destino, file.getName());
-            try {
-                Files.copy(file.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                return true;
-            } catch (IOException e) {
-                e.printStackTrace();
-                return false;
-            }
+      boolean copiar(File fileToCopy) {
+        if (fileToCopy.exists() && fileToCopy.isFile()) {
+            this.fileToCopy = fileToCopy;
+            return true;
         } else {
             System.out.println("No existe archivo.");
             return false;
         }
     }
- 
-    void pegar() {
 
+    public boolean pegar(File destinationFolder) {
+        if (fileToCopy == null) {
+            JOptionPane.showMessageDialog(null, "No hay un archivo copiado para pegar.");
+            return false;
+        }
+
+        if (destinationFolder == null || !destinationFolder.isDirectory()) {
+            JOptionPane.showMessageDialog(null, "Seleccione un directorio válido.");
+            return false;
+        }
+
+        File destFile = new File(destinationFolder, fileToCopy.getName());
+        try {
+            Files.copy(fileToCopy.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            JOptionPane.showMessageDialog(null, "Archivo pegado correctamente.");
+            return true;
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Hubo un error al pegar el archivo.");
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    
+     public void guardarFile() {
+        try (FileWriter writer = new FileWriter(directory)) {
+            rtfEditorKit.write(writer, textPane.getDocument(), 0, textPane.getDocument().getLength());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Error al guardar el archivo: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
         void cambiarNombre(File archivo) {
