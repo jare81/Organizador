@@ -5,10 +5,7 @@
 
 import javax.swing.JFrame;
 
-/**
- *
- * @author Laura Sabillon
- */
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.BufferedReader;
@@ -52,7 +49,9 @@ public class Administrador extends JFrame {
         grid.insets = new Insets(10, 10, 10, 10);
         File srcDir = new File(System.getProperty("user.dir"));
         rootNode = crearNodo(srcDir);
-        txtBuscar = new JTextField("Buscar");
+        txtBuscar = new JTextField(" ORGANIZADOR DE ARCHIVOS" );
+        txtBuscar.setEditable(false);
+        txtBuscar.setHorizontalAlignment(SwingConstants.CENTER);
         grid.gridx = 0;
         grid.gridy = 0;
         grid.gridwidth = 2;
@@ -418,8 +417,8 @@ public class Administrador extends JFrame {
     }
 
     private void abrirArchivo(File archivo) {
-        if (archivo == null || !archivo.exists()) {
-            JOptionPane.showMessageDialog(this, "El archivo no existe o es inválido.", "Error", JOptionPane.ERROR_MESSAGE);
+
+        if (archivo.isDirectory()) {
             return;
         }
 
@@ -442,7 +441,8 @@ public class Administrador extends JFrame {
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(this, "Error al leer el archivo: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
-    }
+}
+
 
     private DefaultMutableTreeNode crearNodo(File file) {
         DefaultMutableTreeNode nodo = new DefaultMutableTreeNode(file);

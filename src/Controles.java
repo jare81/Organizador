@@ -101,7 +101,28 @@ public class Controles {
         }
     }
 
-        void cambiarNombre(File archivo) {
+            void cambiarNombre(File archivo) {
+        if (archivo.isDirectory()) {
+            String nuevoNombre = JOptionPane.showInputDialog(
+                null,
+                "Ingrese el nuevo nombre para el directorio:",
+                archivo.getName()
+            );
+
+            if (nuevoNombre != null && !nuevoNombre.trim().isEmpty()) {
+                File directorioRenombrado = new File(archivo.getParent(), nuevoNombre);
+
+                boolean exito = archivo.renameTo(directorioRenombrado);
+
+                if (exito) {
+                    JOptionPane.showMessageDialog(null, "El directorio ha sido renombrado exitosamente.");
+                } else {
+                    JOptionPane.showMessageDialog(null, "No se pudo renombrar el directorio.");
+                }
+            } else {
+                JOptionPane.showMessageDialog(null, "El nombre del directorio no puede estar vacío.");
+            }
+        } else if (archivo.isFile()) {
             String extensionOriginal = "";
 
             int i = archivo.getName().lastIndexOf('.');
@@ -132,6 +153,10 @@ public class Controles {
             } else {
                 JOptionPane.showMessageDialog(null, "El nombre no puede estar vacío.");
             }
+        } else {
+            JOptionPane.showMessageDialog(null, "El archivo o directorio no es válido.");
         }
+    }
+
 
 }
