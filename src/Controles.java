@@ -12,10 +12,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JTextPane;
 import javax.swing.text.rtf.RTFEditorKit;
 
-/**
- *
- * @author Laura Sabillon
- */public class Controles {
+public class Controles {
 
     private File directory = null;
     private RTFEditorKit rtfEditorKit = new RTFEditorKit(); 

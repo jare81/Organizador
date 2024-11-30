@@ -11,14 +11,16 @@ import javax.swing.JFrame;
  */
 import javax.swing.*;
 import java.awt.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.rtf.RTFEditorKit;
+
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
@@ -37,7 +39,7 @@ public class Administrador extends JFrame {
     private DefaultListModel<String> listModel;
     private JScrollPane jScrollPane1, jScrollPane2;
     private DefaultMutableTreeNode rootNode;
-   private File archivoAbierto;
+    private File archivoAbierto;
     private File seleccionado;
     private JTextPane textPane;
 
@@ -134,8 +136,8 @@ public class Administrador extends JFrame {
         });
 
         bnCopi = new JButton("Copiar");
-        
-         bnCopi.addActionListener(e -> {
+
+        bnCopi.addActionListener(e -> {
             TreePath selectedPath = jTree1.getSelectionPath();
             if (selectedPath == null) {
                 JOptionPane.showMessageDialog(this, "Por favor, seleccione un archivo para copiar.");
@@ -163,7 +165,6 @@ public class Administrador extends JFrame {
             }
         });
 
-
         bnPaste = new JButton("Pegar");
         bnPaste.addActionListener(e -> {
             TreePath selectedPath = jTree1.getSelectionPath();
@@ -186,22 +187,18 @@ public class Administrador extends JFrame {
             } else {
                 JOptionPane.showMessageDialog(this, "Error al pegar el archivo.");
             }
-            
+
             actualizarJTree();
         });
 
-        
         bnModificar = new JButton("Modificar");
-        
-        bnModificar.addActionListener( e-> {
-           /* control.setTextFrame(textPane);
-            guardarCambios(textPane);*/
-            
-            abrirArchivo(seleccionado.getName());
-                control.setTextFrame(textPane);
-      
+
+        bnModificar.addActionListener(e -> {
+
+            control.setTextFrame(textPane);
+            guardarCambios(textPane);
+
         });
-        
 
         ordenarCombo = new JComboBox<>(new String[]{
             "Ordenar por",
@@ -265,7 +262,8 @@ public class Administrador extends JFrame {
                         System.out.println("Selected Directory Path: " + selectedFile.getAbsolutePath());
                         control.modificarFile(selectedFile);
                     } else {
-                        JOptionPane.showMessageDialog(this, "Por favor seleccione un directorio.");
+                        System.out.println("Selected File Path: " + selectedFile.getAbsolutePath());
+                        abrirArchivo(selectedFile);
                     }
                 }
             }
@@ -384,10 +382,7 @@ public class Administrador extends JFrame {
         model.reload();
     }
 
-    
-    
-    
-   private void actualizarJTree() {
+    private void actualizarJTree() {
         TreePath selectedPath = jTree1.getSelectionPath();
 
         rootNode = crearNodo(new File(System.getProperty("user.dir")));
@@ -401,38 +396,53 @@ public class Administrador extends JFrame {
     }
 
     public void guardarCambios(JTextPane textPane) {
-        try {
-            RTFEditorKit rtfEditorKit = new RTFEditorKit(); // Usar para manejar RTF
-            if (seleccionado != null && seleccionado.canWrite()) {
-                try (FileOutputStream fos = new FileOutputStream(seleccionado)) {
-                    rtfEditorKit.write(fos, textPane.getDocument(), 0, textPane.getDocument().getLength());
-                    JOptionPane.showMessageDialog(this, "Archivo guardado con exito ");
-                }
-            } else {
-             JOptionPane.showMessageDialog(this, "Error no se puede escribir en un archivo nulo " );
+        if (seleccionado == null || !seleccionado.canWrite()) {
+            JOptionPane.showMessageDialog(this, "Error: No se puede escribir en un archivo nulo o protegido.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-            }
-        } catch (IOException | BadLocationException e) {
+        if (!seleccionado.getName().endsWith(".txt")) {
+            JOptionPane.showMessageDialog(this, "El archivo no es un archivo de texto (.txt). No se han realizado cambios.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(seleccionado))) {
+            String content = textPane.getText();
+
+            bw.write(content);
+
+            JOptionPane.showMessageDialog(this, "Archivo guardado con éxito.");
+        } catch (IOException e) {
             JOptionPane.showMessageDialog(this, "Error al guardar el archivo: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-    
-    private void abrirArchivo(String nombreArchivo) {
-        
-        File archivo = new File(seleccionado.getAbsolutePath());
-        archivoAbierto = archivo;
 
-        
+    private void abrirArchivo(File archivo) {
+        if (archivo == null || !archivo.exists()) {
+            JOptionPane.showMessageDialog(this, "El archivo no existe o es inválido.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-        try (FileInputStream fis = new FileInputStream(archivo)) {
-            RTFEditorKit rtfEditorKit = new RTFEditorKit();
-            textPane.setDocument(rtfEditorKit.createDefaultDocument());
-            rtfEditorKit.read(fis, textPane.getDocument(), 0);
-        } catch (IOException | javax.swing.text.BadLocationException ex) {
+        if (!archivo.getName().endsWith(".txt")) {
+            JOptionPane.showMessageDialog(this, "El archivo no es un formato TXT, no se podrá editar.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
+            textPane.setText("");
+
+            String line;
+            StringBuilder content = new StringBuilder();
+
+            while ((line = br.readLine()) != null) {
+                content.append(line).append("\n");
+            }
+
+            textPane.setText(content.toString());
+        } catch (IOException ex) {
             JOptionPane.showMessageDialog(this, "Error al leer el archivo: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-
 
     private DefaultMutableTreeNode crearNodo(File file) {
         DefaultMutableTreeNode nodo = new DefaultMutableTreeNode(file);
